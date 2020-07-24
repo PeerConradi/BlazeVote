@@ -1,6 +1,6 @@
 # BlazeVote
 
-Project to create a nearly anonymouse voting system. Working With Blazor-Server.
+Project to create a nearly anonymous voting system. Working With Blazor-Server.
 
 ## How does it work
 
