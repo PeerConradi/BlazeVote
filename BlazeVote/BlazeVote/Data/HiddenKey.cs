@@ -1,7 +1,11 @@
-public class HiddenKey
+
+namespace BlazeVote.Data
 {
 
-    public string HiddenKeyId { get; set; }
+    public class HiddenKey
+    {
 
-    public VoteGroup Group { get; set; }
+        public string HiddenKeyId { get; set; }
+    }
+
 }

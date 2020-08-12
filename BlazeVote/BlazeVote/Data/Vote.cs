@@ -1,10 +1,18 @@
-public class Vote
+using System.Linq;
+using System.Collections.Generic;
+
+namespace BlazeVote.Data
 {
-    public int VoteId { get; set; }
 
-    public VoteQuestion Question { get; set; }
+    public class Vote
+    {
+        public int VoteId { get; set; }
 
-    public HiddenKey Key { get; set; }
+        public VoteQuestion Question { get; set; }
 
-    public List<string> Choises { get; set; }
+        public HiddenKey Key { get; set; }
+
+        public List<string> Choises { get; set; }
+    }
+
 }

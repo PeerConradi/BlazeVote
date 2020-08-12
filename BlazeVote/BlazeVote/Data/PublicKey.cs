@@ -1,9 +1,12 @@
-public class PublicKey
+namespace BlazeVote.Data
 {
 
-    public string VoteGroupId { get; set; }
+    public class PublicKey
+    {
 
-    public VoteGroup Group { get; set; }
+        public string PublicKeyId { get; set; }
 
-    public bool IsRegistered { get; set; }
+        public bool IsRegistered { get; set; }
+    }
+
 }
