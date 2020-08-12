@@ -22,4 +22,4 @@ jobs:
     - name: Build
       run: cd ./BlazeVote && dotnet build --configuration Release --no-restore
     - name: Test
-      run: dotnet test --no-restore --verbosity normal
+      run: cd ./BlazeVote && dotnet test --no-restore --verbosity normal
