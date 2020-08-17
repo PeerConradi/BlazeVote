@@ -1,0 +1,214 @@
+﻿@page "/Manage"
+
+@using BlazeVote.Data
+@using Blazored.LocalStorage
+@inject Services.VoteService VoteService
+@inject ILocalStorageService localStore
+<div class="row">
+    <div class="col-12">
+        <h1>Verwaltung</h1>
+    </div>
+
+
+</div>
+
+
+<p>Auf dieser Ebene kannst du eine Umfragengruppe verwalten.</p>
+@if (currentGroup == null)
+{
+    <div class="row">
+        <div class="col-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Neu erstellen</h5>
+                    <p>Eine neue Gruppe erstellen um Abstimmungen durchführen zu können.</p>
+                    <button class="btn btn-primary" @onclick="CreateGroup">Neue Gruppe erstellen</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Gruppe bearbeiten</h5>
+                    @if (loginGroup != null)
+                    {
+                        <EditForm Model="@loginGroup" OnValidSubmit="CheckLogin">
+                            <div class="form-group">
+                                <label>Gruppen Id: </label>
+                                <InputText class="form-control" @bind-Value="@loginGroup.Id"></InputText>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Secret </label>
+                                <InputText class="form-control" @bind-Value="@loginGroup.Secret"></InputText>
+                            </div>
+
+                            <div class="form-group">
+                                <button class="btn btn-success" type="submit">Einloggen</button>
+                            </div>
+                        </EditForm>
+                    }
+
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (currentGroup != null)
+{
+    <p>Deine Gruppe wurde angelegt, hier ein paar wichtige Daten: </p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Wert</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Id</td>
+                <td>@currentGroup.VoteGroupId</td>
+            </tr>
+            <tr>
+                <td>Secret <small>Merken und unbedingt geheim halten!</small></td>
+                <td>
+                    @if (showSecret)
+                    {
+                        @currentGroup.Secret
+                        <button class="btn btn-outline-primary" @onclick="@toggleShowSecret">Secret ausblenden</button>
+                    }
+                    else
+                    {
+                        <button class="btn btn-outline-primary" @onclick="@toggleShowSecret">Secret anzeigen</button>
+                    }
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Öffentliche Schlüssel</h3>
+    <p>
+        Die öffentlichen Schlüssel sind dafür da an die Teilnehmenden rausgegeben zu werden. Diese können dann in sogenannte HiddenKeys (geheime Schlüssel) umgewandelt werden, mit welchen
+        abgestimmt werden kann. Jeder Öffentliche Schlüssel kann nur ein mal umgewandelt werden. Ob ein öffentlicher Schlüssel umgewandelt wurde kann nachverfolgt werden, jedoch nicht
+        in welchen geheimen Schlüssel.
+    </p>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Schlüssel</th>
+                <th>Vergeben</th>
+                <th>Eingelöst</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in currentGroup.PublicKeys)
+            {
+                <tr>
+                    <td>@entry.PublicKeyId</td>
+                    <td>
+                        <EditForm Model="@entry">
+                            <InputCheckbox @bind-Value="@entry.GivenOut"></InputCheckbox>
+                        </EditForm>
+                    </td>
+                    <td>
+                        @if (entry.IsRegistered)
+                        {
+                            <b>Registriert</b>
+                        }
+                    </td>
+                </tr>
+
+            }
+            <tr>
+                <td colspan="3"><button class="btn btn-primary btn-block" @onclick="CreatePublicKey">Neu hinzufügen</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h3>Geheime Schlüssel</h3>
+    <p>Die geheimen Schlüssel können für die Abstimmungen verwendet werden. Auf diese hat man keinen Einfluss mehr.</p>
+    <p>Es wurden insgesamt: @currentGroup.HiddenKeys.Count geheime Schlüssel angefordert.</p>
+}
+
+
+@code {
+
+
+
+    private class LoginToGroup
+    {
+
+
+        public string Id { get; set; }
+
+        public bool IsValid { get; set; } = false;
+
+        public string Secret { get; set; }
+    }
+
+    private LoginToGroup loginGroup = new LoginToGroup();
+
+    private bool showSecret = false;
+
+    private void toggleShowSecret()
+    {
+        this.showSecret = !showSecret;
+    }
+
+    private VoteGroup currentGroup;
+
+    public async void CreateGroup()
+    {
+        currentGroup = VoteService.GenerateNewVoteGroup();
+        await localStore.SetItemAsync("blazeVoteGroupId", currentGroup.VoteGroupId);
+        await localStore.SetItemAsync("blazeVoteGroupSecret", currentGroup.Secret);
+    }
+
+    public void CreatePublicKey()
+    {
+        if (currentGroup != null)
+        {
+            VoteService.GeneratePublicKey(currentGroup);
+        }
+    }
+
+    public async void CheckLogin()
+    {
+        var group = VoteService.GetVoteGroup(loginGroup.Id);
+        if (group != null)
+        {
+            if (group.Secret == loginGroup.Secret)
+            {
+                this.currentGroup = group;
+                await localStore.SetItemAsync("blazeVoteGroupId", group.VoteGroupId);
+                await localStore.SetItemAsync("blazeVoteGroupSecret", group.Secret);
+            }
+        }
+    }
+
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if the last given key is still valid.
+        var id = await localStore.GetItemAsStringAsync("blazeVoteGroupId");
+        var secret = await localStore.GetItemAsStringAsync("blazeVoteGroupSecret");
+        if (!string.IsNullOrEmpty(id) && !string.IsNullOrEmpty(secret))
+        {
+            var group = VoteService.GetVoteGroup(id);
+            if (group != null)
+            {
+                if (group.Secret == secret)
+                {
+                    this.currentGroup = group;
+                }
+            }
+            else
+            {
+                // Delete the Secret because the key doesnt seems to be valid
+                await localStore.RemoveItemAsync("blazeVoteGroupSecret");
+            }
+        }
+    }
+}

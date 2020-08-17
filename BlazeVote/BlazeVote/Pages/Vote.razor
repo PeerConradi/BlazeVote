@@ -1,0 +1,134 @@
+﻿@page "/Vote"
+
+@using BlazeVote.Data
+@using System.ComponentModel.DataAnnotations
+@using Blazored.LocalStorage
+@inject Services.VoteService VoteService
+@inject ILocalStorageService localStore
+
+<h1>Abstimmung</h1>
+
+<p>Für eine Abstimmung gebe bitte zunächst eine Gruppenkennung ein</p>
+
+@if (currentGroup == null)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Gruppe beitreten</h5>
+                    <p>Der/Die Ersteller/in der Gruppe sollte dir einen Zugangsschlüssel (GruppenId) gegeben haben.</p>
+                    <EditForm Model="@groupLogin" OnValidSubmit="CheckGroupLogin">
+                        <div class="form-group">
+                            <label>Gruppen Id:</label>
+                            <InputText @bind-Value="@groupLogin.GroupId" class="form-control"></InputText>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button class="btn btn-primary" type="submit">Gruppe betreten</button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@if (currentGroup != null)
+{
+    <p>Besitzt du derzeit noch einen Public Key (Öffentlichen Schlüssel)?</p>
+    <p>
+        Dann wandle diesen nun in einen geheimen Schlüssel um, welchen du dir merken musst. Dieser
+        geheime Schlüssel erlaubt dir an Abstimmungen teilzunehmen.
+    </p>
+    <EditForm class="form-group" Model="@publicKeyModel" OnValidSubmit="CheckPublicKey">
+        <label>Öffentlicher Schlüssel</label>
+        <InputText class="form-control" @bind-Value="publicKeyModel.Key"></InputText>
+        <button class="btn btn-primary" type="submit">Click me</button>
+    </EditForm>
+
+    @if (generatedHiddenKey != null)
+    {
+        <p>Dir wurde folgender geheime Schlüssel zugewiesen.</p>
+        <p><small>Merke dir diesen Schlüssel und speichere ihn am Besten irgendwo ab oder schreibe ihn auf. Gebe diesen Schlüssel nicht weiter!</small></p>
+        <input class="form-control" value="@generatedHiddenKey.HiddenKeyId" readonly="readonly" />
+        <button @onclick="SaveHiddenKeyLocal">Lokal speichern</button>
+    }
+
+}
+
+@code {
+
+    private class PublicKeyInput
+    {
+        [Required]
+        public string Key { get; set; }
+    }
+
+    private class GroupLogin
+    {
+        [Required]
+        public string GroupId { get; set; }
+    }
+
+    private PublicKeyInput publicKeyModel = new PublicKeyInput();
+
+    VoteGroup currentGroup;
+
+    GroupLogin groupLogin = new GroupLogin();
+
+    HiddenKey generatedHiddenKey = null;
+
+    public void CheckPublicKey()
+    {
+        if (currentGroup != null)
+        {
+            generatedHiddenKey = VoteService.GenerateHiddenKey(currentGroup, publicKeyModel.Key);
+        }
+    }
+
+    public void CheckGroupLogin()
+    {
+        var group = VoteService.GetVoteGroup(groupLogin.GroupId);
+        if (group != null)
+        {
+            currentGroup = group;
+        }
+    }
+
+    public async void SaveHiddenKeyLocal()
+    {
+        if (generatedHiddenKey != null)
+        {
+            await localStore.SetItemAsync("blazeVoteHiddenKey", generatedHiddenKey.HiddenKeyId);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Check if the last given key is still valid.
+        var id = await localStore.GetItemAsStringAsync("blazeVoteGroupId");
+        if (!string.IsNullOrEmpty(id))
+        {
+            var group = VoteService.GetVoteGroup(id);
+            if (group != null)
+            {
+                currentGroup = group;
+                // Check if the saved Hidden Key is valid for this group, if not delete it!
+                var savedKey = await localStore.GetItemAsStringAsync("blazeVoteHiddenKey");
+                if (!string.IsNullOrEmpty(savedKey))
+                {
+                    if (!group.HiddenKeys.Any(n => n.HiddenKeyId == savedKey))
+                    {
+                        localStore.RemoveItemAsync("blazeVoteHiddenKey");
+                    }
+                }
+            }
+            else
+            {
+                // Delete the Secret because the key doesnt seems to be valid
+                await localStore.RemoveItemAsync("blazeVoteGroupId");
+            }
+        }
+    }
+}

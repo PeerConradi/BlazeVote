@@ -1,8 +1,11 @@
 using BlazeVote.Data;
 
-public interface IVoteService
+namespace BlazeVote.Services
 {
-    public VoteGroup GenerateNewVoteGroup(string id = null);
+    public interface IVoteService
+    {
+        public VoteGroup GenerateNewVoteGroup(string id = null);
 
-    public VoteGroup GetVoteGroup(string id);
+        public VoteGroup GetVoteGroup(string id);
+    }
 }

@@ -1,3 +1,4 @@
+
 namespace BlazeVote.Data
 {
 
@@ -5,6 +6,8 @@ namespace BlazeVote.Data
     {
 
         public string PublicKeyId { get; set; }
+
+        public bool GivenOut { get; set; }
 
         public bool IsRegistered { get; set; }
     }

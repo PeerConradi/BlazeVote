@@ -16,10 +16,10 @@ namespace BlazeVote.Services
             // Allows the user to give a custom vote Group id by the given value if its available
             if (id != null)
             {
-                if (!_voteGroups.Any(n => n.VoteGroupId == id))
+                if (_voteGroups.All(n => n.VoteGroupId != id))
                     group.VoteGroupId = id;
             }
-                
+            _voteGroups.Add(group);
             return group;
         }
 
