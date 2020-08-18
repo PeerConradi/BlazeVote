@@ -5,7 +5,7 @@ VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazeVote", "BlazeVote\BlazeVote.csproj", "{BFED3E9F-CAAA-4312-9D58-B0C20EBB72A3}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazeVoteNUnitTests", "BlazeVoteNUnitTests\BlazeVoteNUnitTests.csproj", "{43C8CED5-1DA1-419A-A109-69CE537C3795}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BlazeVoteNUnitTests", "BlazeVoteNUnitTests\BlazeVoteNUnitTests.csproj", "{43C8CED5-1DA1-419A-A109-69CE537C3795}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

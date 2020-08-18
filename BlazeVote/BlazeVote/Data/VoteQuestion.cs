@@ -1,18 +1,26 @@
 using System.Collections.Generic;
 using System;
+using System.Linq;
 
 namespace BlazeVote.Data
 {
     public class VoteQuestion
     {
+        public enum VoteStates
+        {
+            EDITING,
+            OPEN,
+            CLOSED,
+            FINISHED
+        }
 
-        public int VoteId { get; set; }
+        public string VoteQuestionId { get; set; }
 
         public string Question { get; set; }
 
         public VoteGroup Group { get; set; }
 
-        public List<string> Answers { get; set; }
+        public List<Answer> Options { get; set; }
 
         public List<Vote> Votes { get; set; }
 
@@ -20,21 +28,30 @@ namespace BlazeVote.Data
 
         public DateTime OpenUntil { get; set; }
 
-        public Dictionary<string, int> CountVotes()
-        {
-            var dict = new Dictionary<string, int>();
+        public VoteStates State { get; set; } = VoteStates.EDITING;
 
-            Answers.ForEach(option =>
+        public Dictionary<Answer, int> CountVotes()
+        {
+            var dict = new Dictionary<Answer, int>();
+
+            Options.ForEach(option =>
             {
                 int count = 0;
                 Votes.ForEach(vote =>
                 {
-                    if (vote.Choises.Contains(option)) count++;
+                    if (vote.Choises.Any(n => n == option.AnswerId)) count++;
                 });
                 dict.Add(option, count);
             });
 
             return dict;
+        }
+
+        public VoteQuestion()
+        {
+            VoteQuestionId = Util.IdGenerator.RandomString(8);
+            Options = new List<Answer>();
+            Votes = new List<Vote>();
         }
     }
 }

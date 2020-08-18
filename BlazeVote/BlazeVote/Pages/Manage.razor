@@ -4,6 +4,8 @@
 @using BlazeVote.Hubs
 @using Blazored.LocalStorage
 @using Microsoft.AspNetCore.SignalR.Client
+@using System.ComponentModel.DataAnnotations.Schema
+@using Microsoft.AspNetCore.Mvc.ModelBinding.Validation
 @inject Services.VoteService VoteService
 @inject ILocalStorageService localStore
 @inject NavigationManager NavigationManager
@@ -133,6 +135,83 @@
     <h3>Geheime Schlüssel</h3>
     <p>Die geheimen Schlüssel können für die Abstimmungen verwendet werden. Auf diese hat man keinen Einfluss mehr.</p>
     <p>Es wurden insgesamt: @currentGroup.HiddenKeys.Count geheime Schlüssel angefordert.</p>
+
+
+    <div class="row">
+        <div class="col-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Abstimmungen</h5>
+                    <table class="table">
+                        <thead>
+                        <tr>
+                            <th>Id</th>
+                            <th>Frage</th>
+                            <th>Status</th>
+                            <th>Stimmen</th>
+                            <th>OPT</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        @foreach (var vote in currentGroup.Votes)
+                        {
+                            <tr class="@GetTableClassByState(vote.State)">
+                                <td>@vote.VoteQuestionId</td>
+                                <td>@vote.Question</td>
+                                <td>
+                                    @vote.State.ToString()
+                                </td>
+                                <td>@vote.CountVotes().Sum(n =>n.Value)</td>
+                                <td>
+                                    <button class="btn btn-outline-primary">Details</button>
+                                </td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        
+        <div class="col-6">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Neue Abstimmung</h5>
+                    <EditForm Model="@newQuestion" OnValidSubmit="AddQuestion">
+                        <div class="form-group">
+                            <label>Frage</label>
+                            <InputText @bind-Value="newQuestion.Question" class="form-control"></InputText>
+                        </div>
+                        
+                        @foreach (var answer in newQuestion.Options)
+                        {
+                            <div class="form-group">
+                                <label>Antwort</label>
+                                <InputText @bind-Value="answer.Text" class="form-control"></InputText>
+                            </div>
+                        }
+
+                        <input type="button" class="btn btn-block btn-outline-success" @onclick="AddNewAnswerOption" novalidate="true" value="Antwort hinzufügen" />
+                        
+                        <h5>Einstellungen</h5>
+                        <div class="form-group">
+                            <label>
+                                Erlaube mehrere Angaben
+                                <InputCheckbox @bind-Value="newQuestion.AllowMultiple"></InputCheckbox>
+                            </label>
+                            
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-block btn-primary">Umfrage/Abstimmung anlegen</button>
+                            <small>Die Umfrage wird erst einmal geschlossen sein und muss dann im nächsten Schritt geöffnet werden!</small>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
 }
 
 
@@ -151,6 +230,8 @@
         public string Secret { get; set; }
     }
 
+    private VoteQuestion newQuestion = new VoteQuestion();
+
     private LoginToGroup loginGroup = new LoginToGroup();
 
     private bool showSecret = false;
@@ -158,6 +239,23 @@
     private void toggleShowSecret()
     {
         this.showSecret = !showSecret;
+    }
+
+    private string GetTableClassByState(VoteQuestion.VoteStates state)
+    {
+        switch (state)
+        {
+            case VoteQuestion.VoteStates.EDITING:
+                return "table-info";
+            case VoteQuestion.VoteStates.CLOSED:
+                return "table-dark";
+            case VoteQuestion.VoteStates.OPEN:
+                return "table-warning";
+            case VoteQuestion.VoteStates.FINISHED:
+                return "table-success";
+            default:
+                return "";
+        }
     }
 
     private VoteGroup currentGroup;
@@ -194,6 +292,20 @@
                 await localStore.SetItemAsync("blazeVoteGroupId", group.VoteGroupId);
                 await localStore.SetItemAsync("blazeVoteGroupSecret", group.Secret);
             }
+        }
+    }
+
+    public void AddNewAnswerOption()
+    {
+        newQuestion.Options.Add(new Answer());
+    }
+
+    public void AddQuestion()
+    {
+        if (currentGroup != null)
+        {
+            currentGroup.Votes.Add(newQuestion);
+            newQuestion = new VoteQuestion();
         }
     }
 
