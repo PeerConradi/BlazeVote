@@ -1,9 +1,12 @@
 ﻿@page "/Manage"
 
 @using BlazeVote.Data
+@using BlazeVote.Hubs
 @using Blazored.LocalStorage
+@using Microsoft.AspNetCore.SignalR.Client
 @inject Services.VoteService VoteService
 @inject ILocalStorageService localStore
+@inject NavigationManager NavigationManager
 <div class="row">
     <div class="col-12">
         <h1>Verwaltung</h1>
@@ -135,7 +138,7 @@
 
 @code {
 
-
+    private HubConnection hubConnection;
 
     private class LoginToGroup
     {
@@ -164,13 +167,19 @@
         currentGroup = VoteService.GenerateNewVoteGroup();
         await localStore.SetItemAsync("blazeVoteGroupId", currentGroup.VoteGroupId);
         await localStore.SetItemAsync("blazeVoteGroupSecret", currentGroup.Secret);
+
+        // Now try to join the Group!
+        await hubConnection.SendAsync(VoteHub.JOIN_VOTE_GROUP, currentGroup.VoteGroupId, currentGroup.Secret);
     }
 
     public void CreatePublicKey()
     {
         if (currentGroup != null)
         {
-            VoteService.GeneratePublicKey(currentGroup);
+            var key = VoteService.GeneratePublicKey(currentGroup);
+            // This is not save at all, and should be replaced with SignalR Groups etc.
+            // But just to check if it works I'll leave it in for now!
+            hubConnection.SendAsync("AddPublicKey", currentGroup.VoteGroupId, key);
         }
     }
 
@@ -191,6 +200,25 @@
 
     protected override async Task OnInitializedAsync()
     {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/votehub"))
+            .Build();
+
+
+    // Init SignalR
+        hubConnection.On<Data.PublicKey>(Hubs.VoteHub.ADD_PUBLIC_KEY, (publicKey) =>
+        {
+            if (currentGroup != null)
+            {
+                // Only add if its not already in there
+                if (currentGroup.PublicKeys.All(n => n.PublicKeyId != publicKey.PublicKeyId))
+                    currentGroup.PublicKeys.Add(publicKey);
+            }
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+
         // Check if the last given key is still valid.
         var id = await localStore.GetItemAsStringAsync("blazeVoteGroupId");
         var secret = await localStore.GetItemAsStringAsync("blazeVoteGroupSecret");
@@ -201,7 +229,11 @@
             {
                 if (group.Secret == secret)
                 {
+                    // This Group seems to exists
                     this.currentGroup = group;
+
+                    // Now try to join the Group!
+                    await hubConnection.SendAsync(VoteHub.JOIN_VOTE_GROUP, currentGroup.VoteGroupId, currentGroup.Secret);
                 }
             }
             else
