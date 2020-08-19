@@ -1,0 +1,97 @@
+﻿@using BlazeVote.Services
+@using Microsoft.AspNetCore.SignalR.Client
+@using BlazeVote.Hubs
+
+@inject Services.VoteService VoteService;
+@inject NavigationManager NavigationManager
+
+@if (Group != null)
+{
+    <button class="btn btn-sm btn-block btn-outline-danger" @onclick="RefreshList">Aktualisieren</button>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Schlüssel</th>
+                <th>Vergeben</th>
+                <th>Eingelöst</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var entry in Group.PublicKeys)
+            {
+                <tr>
+                    <td>@entry.PublicKeyId</td>
+                    <td>
+                        <EditForm Model="@entry">
+                            <InputCheckbox @bind-Value="@entry.GivenOut"></InputCheckbox>
+                        </EditForm>
+                    </td>
+                    <td>
+                        @if (entry.IsRegistered)
+                        {
+                            <b>Registriert</b>
+                        }
+                    </td>
+                </tr>
+
+            }
+            <tr>
+                <td colspan="3"><button class="btn btn-primary btn-block" @onclick="CreatePublicKey">Neu hinzufügen</button></td>
+            </tr>
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="text-danger">Die Komponente konnte nicht geladen werden, da keine Gruppe angegeben wurde!</p>
+}
+
+
+@code {
+    [Parameter]
+    public Data.VoteGroup Group { get; set; }
+
+    private HubConnection hubConnection;
+
+    public void CreatePublicKey()
+    {
+        if (Group != null)
+        {
+            var key = VoteService.GeneratePublicKey(Group);
+            // This is not save at all, and should be replaced with SignalR Groups etc.
+            // But just to check if it works I'll leave it in for now!
+            hubConnection.SendAsync("AddPublicKey", Group.VoteGroupId, key);
+        }
+    }
+
+    public void RefreshList()
+    {
+        if (Group != null)
+        {
+            Group.PublicKeys = VoteService.GetPublicKeysOfGroup(Group.VoteGroupId);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl(NavigationManager.ToAbsoluteUri("/votehub"))
+            .Build();
+
+
+        // Init SignalR
+        hubConnection.On<Data.PublicKey>(Hubs.VoteHub.ADD_PUBLIC_KEY, (publicKey) =>
+        {
+            if (Group != null)
+            {
+            // Only add if its not already in there
+            if (Group.PublicKeys.All(n => n.PublicKeyId != publicKey.PublicKeyId))
+                    Group.PublicKeys.Add(publicKey);
+            }
+            StateHasChanged();
+        });
+
+        await hubConnection.StartAsync();
+
+    }
+}

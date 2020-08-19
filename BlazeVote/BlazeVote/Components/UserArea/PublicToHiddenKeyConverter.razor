@@ -1,0 +1,86 @@
+﻿@using BlazeVote.Data
+@using System.Diagnostics.Eventing.Reader
+@using Blazored.LocalStorage
+@inject Services.VoteService VoteService;
+@inject ILocalStorageService localStore
+
+<h3>Schlüssel umwandeln</h3>
+<p>
+    Von dem/der Ersteller/in der Gruppe in welcher die Abstimmungen stattfinden sollen, solltest du die hierfür benötigten Informationen
+    bekommen haben. Der Öffentliche Schlüssel kann nur ein mal in einen privaten Schlüssel umgewandelt werden.
+</p>
+<p class="font-weight-bold">Schreibe dir deinen geheimen Schlüssel deshalb unbedingt auf und gebe diesen nicht weiter!</p>
+<EditForm Model="@key" OnValidSubmit="RequestHiddenKey">
+    <div class="form-group">
+        <label>Gruppen Id</label>
+        <InputText @bind-Value="key.GroupId" class="form-control"></InputText>
+        <small>Der Name der Gruppe sollte durch den Ersteller der Umfrage bekannt gegeben werden</small>
+    </div>
+
+    <div class="form-group">
+        <label>Schlüssel</label>
+        <InputText @bind-Value="key.PublicKey" class="form-control"></InputText>
+        <small>Der Ersteller der Gruppe sollte dir einen Schlüssel zukommen gelassen haben.</small>
+    </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Schlüssel anfordern</button>
+    </div>
+</EditForm>
+
+@if (!string.IsNullOrEmpty(HiddenKeyString) && ErrorGeneratingKey == false)
+{
+    <h3>Dein geheimer Schlüssel lautet:</h3>
+    <input type="text" readonly="readonly" class="form-control" value="@HiddenKeyString" />
+    <button class="btn btn-block btn-outline-success">Lokal Speichern und Einloggen</button>
+    <small>Mit dem Klick auf diesen Button wird der Schlüssel als Cookie lokal in deinem Browser abgelegt.</small>
+}
+
+@if (ErrorGeneratingKey)
+{
+    <div class="alert alert-warning" role="alert">
+        Es konnte kein Schlüssel generiert werden, möglicherweise ist dieser bereits in Verwendung!
+    </div>
+}
+
+
+@code {
+
+    private class ConvertKey
+    {
+        public string GroupId { get; set; }
+
+        public string PublicKey { get; set; }
+    }
+
+    private bool ErrorGeneratingKey { get; set; } = false;
+
+    private string HiddenKeyString { get; set; }
+
+    private ConvertKey key = new ConvertKey();
+
+    public async void SaveHiddenKeyLocal()
+    {
+        if (HiddenKeyString != null)
+        {
+            await localStore.SetItemAsync("blazeVoteHiddenKey", HiddenKeyString);
+        }
+    }
+
+    private void RequestHiddenKey()
+    {
+        var group = VoteService.GetVoteGroup(key.GroupId);
+        if (group != null)
+        {
+            var hiddenKey = VoteService.GenerateHiddenKey(group, key.PublicKey);
+            if (hiddenKey != null)
+            {
+                this.HiddenKeyString = hiddenKey.HiddenKeyId;
+            }
+            else
+            {
+                ErrorGeneratingKey = true;
+            }
+        }
+    }
+}

@@ -49,5 +49,14 @@ namespace BlazeVote.Services
             hiddenKey.HiddenKeyId = Util.IdGenerator.RandomString(32);
             return hiddenKey;
         }
+
+        public List<PublicKey> GetPublicKeysOfGroup(string groupId)
+        {
+            var group = _voteGroups.FirstOrDefault(n => n.VoteGroupId == groupId);
+            if (group == null)
+                return new List<PublicKey>();
+
+            return group.PublicKeys;
+        }
     }
 }

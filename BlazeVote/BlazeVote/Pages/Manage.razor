@@ -6,6 +6,7 @@
 @using Microsoft.AspNetCore.SignalR.Client
 @using System.ComponentModel.DataAnnotations.Schema
 @using Microsoft.AspNetCore.Mvc.ModelBinding.Validation
+@using BlazeVote.Components.Managment
 @inject Services.VoteService VoteService
 @inject ILocalStorageService localStore
 @inject NavigationManager NavigationManager
@@ -64,166 +65,129 @@
 @if (currentGroup != null)
 {
     <TabControl>
-        <TabPage Text="Tab 1">
-            <h1>The first tab</h1>
-        </TabPage>
-        <TabPage Text="Tab 2">
-            <h1>The second tab</h1>
-        </TabPage>
-        <TabPage Text="Tab 3">
-            <h1>The third tab</h1>
-        </TabPage>
-    </TabControl>
-
-    <p>Deine Gruppe wurde angelegt, hier ein paar wichtige Daten: </p>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>Wert</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Id</td>
-                <td>@currentGroup.VoteGroupId</td>
-            </tr>
-            <tr>
-                <td>Secret <small>Merken und unbedingt geheim halten!</small></td>
-                <td>
-                    @if (showSecret)
-                    {
-                        @currentGroup.Secret
-                        <button class="btn btn-outline-primary" @onclick="@toggleShowSecret">Secret ausblenden</button>
-                    }
-                    else
-                    {
-                        <button class="btn btn-outline-primary" @onclick="@toggleShowSecret">Secret anzeigen</button>
-                    }
-                </td>
-            </tr>
-        </tbody>
-    </table>
-
-    <h3>Öffentliche Schlüssel</h3>
-    <p>
-        Die öffentlichen Schlüssel sind dafür da an die Teilnehmenden rausgegeben zu werden. Diese können dann in sogenannte HiddenKeys (geheime Schlüssel) umgewandelt werden, mit welchen
-        abgestimmt werden kann. Jeder Öffentliche Schlüssel kann nur ein mal umgewandelt werden. Ob ein öffentlicher Schlüssel umgewandelt wurde kann nachverfolgt werden, jedoch nicht
-        in welchen geheimen Schlüssel.
-    </p>
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Schlüssel</th>
-                <th>Vergeben</th>
-                <th>Eingelöst</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var entry in currentGroup.PublicKeys)
-            {
+        <TabPage Text="Allgemein">
+            <p>Deine Gruppe wurde angelegt, hier ein paar wichtige Daten: </p>
+            <table class="table">
+                <thead>
                 <tr>
-                    <td>@entry.PublicKeyId</td>
+                    <th>Name</th>
+                    <th>Wert</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>Id</td>
+                    <td>@currentGroup.VoteGroupId</td>
+                </tr>
+                <tr>
+                    <td>Secret <small>Merken und unbedingt geheim halten!</small></td>
                     <td>
-                        <EditForm Model="@entry">
-                            <InputCheckbox @bind-Value="@entry.GivenOut"></InputCheckbox>
-                        </EditForm>
-                    </td>
-                    <td>
-                        @if (entry.IsRegistered)
+                        @if (showSecret)
                         {
-                            <b>Registriert</b>
+                            @currentGroup.Secret
+                            <button class="btn btn-outline-primary" @onclick="@toggleShowSecret">Secret ausblenden</button>
+                        }
+                        else
+                        {
+                            <button class="btn btn-outline-primary" @onclick="@toggleShowSecret">Secret anzeigen</button>
                         }
                     </td>
                 </tr>
+                </tbody>
+            </table>
+        </TabPage>
+        <TabPage Text="Zugänge (Schlüssel)">
+            <h3>Öffentliche Schlüssel</h3>
+            <p>
+                Die öffentlichen Schlüssel sind dafür da an die Teilnehmenden rausgegeben zu werden. Diese können dann in sogenannte HiddenKeys (geheime Schlüssel) umgewandelt werden, mit welchen
+                abgestimmt werden kann. Jeder Öffentliche Schlüssel kann nur ein mal umgewandelt werden. Ob ein öffentlicher Schlüssel umgewandelt wurde kann nachverfolgt werden, jedoch nicht
+                in welchen geheimen Schlüssel.
+            </p>
+            <ManagePublicKeys Group="@currentGroup"></ManagePublicKeys>
+            <h3>Geheime Schlüssel</h3>
+            <p>Die geheimen Schlüssel können für die Abstimmungen verwendet werden. Auf diese hat man keinen Einfluss mehr.</p>
+            <p>Es wurden insgesamt: @currentGroup.HiddenKeys.Count geheime Schlüssel angefordert.</p>
+        </TabPage>
+        <TabPage Text="Umfragen/Abstimmungen">
+            <div class="row">
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Abstimmungen</h5>
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Id</th>
+                                        <th>Frage</th>
+                                        <th>Status</th>
+                                        <th>Stimmen</th>
+                                        <th>OPT</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var vote in currentGroup.Votes)
+                                    {
+                                        <tr class="@GetTableClassByState(vote.State)">
+                                            <td>@vote.VoteQuestionId</td>
+                                            <td>@vote.Question</td>
+                                            <td>
+                                                @vote.State.ToString()
+                                            </td>
+                                            <td>@vote.CountVotes().Sum(n => n.Value)</td>
+                                            <td>
+                                                <button class="btn btn-outline-primary">Details</button>
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
 
-            }
-            <tr>
-                <td colspan="3"><button class="btn btn-primary btn-block" @onclick="CreatePublicKey">Neu hinzufügen</button></td>
-            </tr>
-        </tbody>
-    </table>
 
-    <h3>Geheime Schlüssel</h3>
-    <p>Die geheimen Schlüssel können für die Abstimmungen verwendet werden. Auf diese hat man keinen Einfluss mehr.</p>
-    <p>Es wurden insgesamt: @currentGroup.HiddenKeys.Count geheime Schlüssel angefordert.</p>
+                <div class="col-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Neue Abstimmung</h5>
+                            <EditForm Model="@newQuestion" OnValidSubmit="AddQuestion">
+                                <div class="form-group">
+                                    <label>Frage</label>
+                                    <InputText @bind-Value="newQuestion.Question" class="form-control"></InputText>
+                                </div>
 
+                                @foreach (var answer in newQuestion.Options)
+                                {
+                                    <div class="form-group">
+                                        <label>Antwort</label>
+                                        <InputText @bind-Value="answer.Text" class="form-control"></InputText>
+                                    </div>
+                                }
 
-    <div class="row">
-        <div class="col-6">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Abstimmungen</h5>
-                    <table class="table">
-                        <thead>
-                        <tr>
-                            <th>Id</th>
-                            <th>Frage</th>
-                            <th>Status</th>
-                            <th>Stimmen</th>
-                            <th>OPT</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        @foreach (var vote in currentGroup.Votes)
-                        {
-                            <tr class="@GetTableClassByState(vote.State)">
-                                <td>@vote.VoteQuestionId</td>
-                                <td>@vote.Question</td>
-                                <td>
-                                    @vote.State.ToString()
-                                </td>
-                                <td>@vote.CountVotes().Sum(n =>n.Value)</td>
-                                <td>
-                                    <button class="btn btn-outline-primary">Details</button>
-                                </td>
-                            </tr>
-                        }
-                        </tbody>
-                    </table>
+                                <input type="button" class="btn btn-block btn-outline-success" @onclick="AddNewAnswerOption" novalidate="true" value="Antwort hinzufügen" />
+
+                                <h5>Einstellungen</h5>
+                                <div class="form-group">
+                                    <label>
+                                        Erlaube mehrere Angaben
+                                        <InputCheckbox @bind-Value="newQuestion.AllowMultiple"></InputCheckbox>
+                                    </label>
+
+                                </div>
+
+                                <div class="form-group">
+                                    <button type="submit" class="btn btn-block btn-primary">Umfrage/Abstimmung anlegen</button>
+                                    <small>Die Umfrage wird erst einmal geschlossen sein und muss dann im nächsten Schritt geöffnet werden!</small>
+                                </div>
+                            </EditForm>
+                        </div>
+                    </div>
                 </div>
             </div>
-        </div>
-        
-        
-        <div class="col-6">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Neue Abstimmung</h5>
-                    <EditForm Model="@newQuestion" OnValidSubmit="AddQuestion">
-                        <div class="form-group">
-                            <label>Frage</label>
-                            <InputText @bind-Value="newQuestion.Question" class="form-control"></InputText>
-                        </div>
-                        
-                        @foreach (var answer in newQuestion.Options)
-                        {
-                            <div class="form-group">
-                                <label>Antwort</label>
-                                <InputText @bind-Value="answer.Text" class="form-control"></InputText>
-                            </div>
-                        }
+        </TabPage>
+    </TabControl>
 
-                        <input type="button" class="btn btn-block btn-outline-success" @onclick="AddNewAnswerOption" novalidate="true" value="Antwort hinzufügen" />
-                        
-                        <h5>Einstellungen</h5>
-                        <div class="form-group">
-                            <label>
-                                Erlaube mehrere Angaben
-                                <InputCheckbox @bind-Value="newQuestion.AllowMultiple"></InputCheckbox>
-                            </label>
-                            
-                        </div>
-                        
-                        <div class="form-group">
-                            <button type="submit" class="btn btn-block btn-primary">Umfrage/Abstimmung anlegen</button>
-                            <small>Die Umfrage wird erst einmal geschlossen sein und muss dann im nächsten Schritt geöffnet werden!</small>
-                        </div>
-                    </EditForm>
-                </div>
-            </div>
-        </div>
-    </div>
+    
 }
 
 
@@ -282,16 +246,7 @@
         await hubConnection.SendAsync(VoteHub.JOIN_VOTE_GROUP, currentGroup.VoteGroupId, currentGroup.Secret);
     }
 
-    public void CreatePublicKey()
-    {
-        if (currentGroup != null)
-        {
-            var key = VoteService.GeneratePublicKey(currentGroup);
-            // This is not save at all, and should be replaced with SignalR Groups etc.
-            // But just to check if it works I'll leave it in for now!
-            hubConnection.SendAsync("AddPublicKey", currentGroup.VoteGroupId, key);
-        }
-    }
+    
 
     public async void CheckLogin()
     {
@@ -328,18 +283,6 @@
             .WithUrl(NavigationManager.ToAbsoluteUri("/votehub"))
             .Build();
 
-
-    // Init SignalR
-        hubConnection.On<Data.PublicKey>(Hubs.VoteHub.ADD_PUBLIC_KEY, (publicKey) =>
-        {
-            if (currentGroup != null)
-            {
-                // Only add if its not already in there
-                if (currentGroup.PublicKeys.All(n => n.PublicKeyId != publicKey.PublicKeyId))
-                    currentGroup.PublicKeys.Add(publicKey);
-            }
-            StateHasChanged();
-        });
 
         await hubConnection.StartAsync();
 

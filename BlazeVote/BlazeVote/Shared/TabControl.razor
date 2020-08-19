@@ -1,16 +1,16 @@
-﻿<div>This is a TabControl</div>
-<CascadingValue Value="this">
-    <div class="btn-group" role="group">
+﻿<CascadingValue Value="this">
+    <ul class="nav nav-pills nav-fill bg-light" >
         @foreach (TabPage tabPage in Pages)
         {
-            <button type="button"
-                    class="btn @GetButtonClass(tabPage)"
-                    @onclick=@( () => ActivatePage(tabPage) )>
-                @tabPage.Text
-            </button>
+            <li class="nav-item">
+                <a class="nav-link @GetButtonClass(tabPage)" @onclick=@(() => ActivatePage(tabPage))>@tabPage.Text</a>
+            </li>
         }
+    </ul>
+    <div class="tab-content m-2 bg-light">
+        @ChildContent
     </div>
-    @ChildContent
+    
 </CascadingValue>
 @code {
     // Next line is needed so we are able to add <TabPage> components inside
@@ -32,7 +32,7 @@
 
     string GetButtonClass(TabPage page)
     {
-        return page == ActivePage ? "btn-primary" : "btn-secondary";
+        return page == ActivePage ? "active" : "";
     }
     void ActivatePage(TabPage page)
     {
