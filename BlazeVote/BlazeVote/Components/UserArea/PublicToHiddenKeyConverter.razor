@@ -32,7 +32,7 @@
 {
     <h3>Dein geheimer Schlüssel lautet:</h3>
     <input type="text" readonly="readonly" class="form-control" value="@HiddenKeyString" />
-    <button class="btn btn-block btn-outline-success">Lokal Speichern und Einloggen</button>
+    <button class="btn btn-block btn-outline-success" @onclick="SaveHiddenKeyLocal">Lokal Speichern und Einloggen</button>
     <small>Mit dem Klick auf diesen Button wird der Schlüssel als Cookie lokal in deinem Browser abgelegt.</small>
 }
 
