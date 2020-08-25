@@ -26,44 +26,32 @@
         <div class="col-6">
             <div class="card">
                 <div class="card-body">
-                    <h5 class="card-title">Mit Geheimen Schlüssel anmelden</h5>
+                    <h5 class="card-title">Mit geheimen Schlüssel anmelden</h5>
                 </div>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="jumbotron">
+                <h1 class="display-4">Bereit!</h1>
+                <p class="lead">Du bist in die Gruppe: @currentGroup.VoteGroupId eingeloggt.</p>
+                <hr class="my-4">
+                <p>Du kannst nun in dieser Gruppe an den Abstimmungen teilnehmen und die Ergebnisse einsehen.</p>
+                <a class="btn btn-primary btn-lg" href="#" role="button">Aktive Abstimmungen</a>
+                <a class="btn btn-secondary btn-lg" href="#" role="button">Alte Abstimmungen</a>
             </div>
         </div>
     </div>
 }
 
 @code {
+    private VoteGroup currentGroup;
 
-    private class PublicKeyInput
-    {
-        [Required]
-        public string Key { get; set; }
-    }
-
-    private class GroupLogin
-    {
-        [Required]
-        public string GroupId { get; set; }
-    }
-
-    private PublicKeyInput publicKeyModel = new PublicKeyInput();
-
-    VoteGroup currentGroup;
-
-    GroupLogin groupLogin = new GroupLogin();
-
-
-    public void CheckGroupLogin()
-    {
-        var group = VoteService.GetVoteGroup(groupLogin.GroupId);
-        if (group != null)
-        {
-            currentGroup = group;
-        }
-    }
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         // Check if the last given key is still valid.
         var id = await localStore.GetItemAsStringAsync("blazeVoteGroupId");
@@ -72,14 +60,22 @@
             var group = VoteService.GetVoteGroup(id);
             if (group != null)
             {
-                currentGroup = group;
+
                 // Check if the saved Hidden Key is valid for this group, if not delete it!
                 var savedKey = await localStore.GetItemAsStringAsync("blazeVoteHiddenKey");
                 if (!string.IsNullOrEmpty(savedKey))
                 {
+                    
+                    // If the hidden key is invalid then log the user out!
                     if (!group.HiddenKeys.Any(n => n.HiddenKeyId == savedKey))
                     {
                         await localStore.RemoveItemAsync("blazeVoteHiddenKey");
+                    }
+                    else
+                    {
+                        // Changed to the Logged in Mode!
+                        currentGroup = group;
+                        StateHasChanged();
                     }
                 }
             }

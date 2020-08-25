@@ -93,6 +93,14 @@
                         }
                     </td>
                 </tr>
+                <tr>
+                    <td>Gruppen Name</td>
+                    <td>
+                        <EditForm Model="currentGroup">
+                            <InputText class="form-control" @bind-Value="currentGroup.Name"></InputText>
+                        </EditForm>
+                    </td>
+                </tr>
                 </tbody>
             </table>
         </TabPage>
@@ -246,7 +254,7 @@
         await hubConnection.SendAsync(VoteHub.JOIN_VOTE_GROUP, currentGroup.VoteGroupId, currentGroup.Secret);
     }
 
-    
+
 
     public async void CheckLogin()
     {
@@ -277,7 +285,7 @@
     }
 
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         hubConnection = new HubConnectionBuilder()
             .WithUrl(NavigationManager.ToAbsoluteUri("/votehub"))
@@ -298,15 +306,21 @@
                 {
                     // This Group seems to exists
                     this.currentGroup = group;
-
+                    StateHasChanged();
                     // Now try to join the Group!
                     await hubConnection.SendAsync(VoteHub.JOIN_VOTE_GROUP, currentGroup.VoteGroupId, currentGroup.Secret);
+                }
+                else
+                {
+                    // Delete the Secret because the key doesnt seems to be valid
+                    await localStore.RemoveItemAsync("blazeVoteGroupSecret");
                 }
             }
             else
             {
-                // Delete the Secret because the key doesnt seems to be valid
-                await localStore.RemoveItemAsync("blazeVoteGroupSecret");
+                // Delete the group it does not exists
+                await localStore.RemoveItemAsync("blazeVoteGroupId");
+                await localStore.RemoveItemAsync("blazeVoteHiddenKey");
             }
         }
     }

@@ -11,6 +11,8 @@ namespace BlazeVote.Data
 
         public string Secret { get; set; }
 
+        public string Name { get; set; }
+
         /// <summary>
         /// The Public Keys can be seen by the admin. The user with the PublicKey and the VoteGroupId can
         /// generate a hidden Key that only him/her and the platform know.

@@ -1,4 +1,9 @@
-﻿<div class="top-row pl-4 navbar navbar-dark">
+﻿@using Blazored.LocalStorage
+
+@inject Services.VoteService VoteService
+@inject ILocalStorageService localStore
+
+<div class="top-row pl-4 navbar navbar-dark">
     <a class="navbar-brand" href="">BlazeVote</a>
     <button class="navbar-toggler" @onclick="ToggleNavMenu">
         <span class="navbar-toggler-icon"></span>
@@ -6,6 +11,25 @@
 </div>
 
 <div class="@NavMenuCssClass" @onclick="ToggleNavMenu">
+    @if (IsLoggedIn)
+    {
+        <div class="flex-column text-white">
+            <p>Aktuelle Gruppe:</p>
+            <p>@CurrentGroupName</p>
+            <p>
+                @if (IsVoteAllowed)
+                {
+                    <span class="badge badge-success">Bereit</span>
+                }
+                @if (IsGroupAdmin)
+                {
+                    <span class="badge badge-danger">Admin</span>
+                }
+            </p>
+        </div>
+    }
+    
+
     <ul class="nav flex-column">
         <li class="nav-item px-3">
             <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
@@ -14,24 +38,24 @@
         </li>
         <li class="nav-item px-3">
             <NavLink class="nav-link" href="manage">
-                <span class="oi oi-plus" aria-hidden="true"></span> Verwaltung
+                <span class="oi oi-globe" aria-hidden="true"></span> Verwaltung
             </NavLink>
         </li>
         <li class="nav-item px-3">
             <NavLink class="nav-link" href="vote">
-                <span class="oi oi-plus" aria-hidden="true"></span> Abstimmung
+                <span class="oi oi-bar-chart" aria-hidden="true"></span> Abstimmung
             </NavLink>
         </li>
         @*<li class="nav-item px-3">
-            <NavLink class="nav-link" href="counter">
-                <span class="oi oi-plus" aria-hidden="true"></span> Counter
-            </NavLink>
-        </li>
-        <li class="nav-item px-3">
-            <NavLink class="nav-link" href="fetchdata">
-                <span class="oi oi-list-rich" aria-hidden="true"></span> Fetch data
-            </NavLink>
-        </li>*@
+                <NavLink class="nav-link" href="counter">
+                    <span class="oi oi-plus" aria-hidden="true"></span> Counter
+                </NavLink>
+            </li>
+            <li class="nav-item px-3">
+                <NavLink class="nav-link" href="fetchdata">
+                    <span class="oi oi-list-rich" aria-hidden="true"></span> Fetch data
+                </NavLink>
+            </li>*@
     </ul>
 </div>
 
@@ -43,5 +67,57 @@
     private void ToggleNavMenu()
     {
         collapseNavMenu = !collapseNavMenu;
+    }
+
+    public bool IsLoggedIn { get; set; } = false;
+
+    public bool IsGroupAdmin { get; set; } = false;
+
+    public bool IsVoteAllowed { get; set; } = false;
+
+    public string CurrentGroupName { get; set; }
+
+    public async Task Logout()
+    {
+        await localStore.RemoveItemAsync("blazeVoteGroupId");
+        await localStore.RemoveItemAsync("blazeVoteHiddenKey");
+        await localStore.RemoveItemAsync("blazeVoteGroupSecret");
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        var id = await localStore.GetItemAsStringAsync("blazeVoteGroupId");
+        var hiddenSecret = await localStore.GetItemAsStringAsync("blazeVoteHiddenKey");
+        var groupSecret = await localStore.GetItemAsStringAsync("blazeVoteGroupSecret");
+        if (!string.IsNullOrEmpty(id))
+        {
+            var group = VoteService.GetVoteGroup(id);
+
+            if (group != null)
+            {
+                IsLoggedIn = true;
+
+                CurrentGroupName = group.Name;
+
+                //Check of the group Login is with a Hidden Key
+                if (!string.IsNullOrEmpty(hiddenSecret))
+                {
+                    IsVoteAllowed = group.HiddenKeys.Any(n => n.HiddenKeyId == hiddenSecret);
+                }
+
+                if (!string.IsNullOrEmpty(groupSecret))
+                {
+                    IsGroupAdmin = group.Secret == groupSecret;
+                }
+
+                StateHasChanged();
+            }
+            else
+            {
+                // Logout this group doesnt exisit
+                await Logout();
+            }
+        }
+
     }
 }
